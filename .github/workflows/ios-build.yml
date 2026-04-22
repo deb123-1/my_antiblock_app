@@ -7,12 +7,9 @@ jobs:
   build:
     runs-on: macos-latest
     env:
-      # Убираем то самое предупреждение из логов
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      # Обновили версию с v3 на v4
       - uses: actions/checkout@v4
-      
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -20,16 +17,20 @@ jobs:
           
       - run: flutter pub get
       
+      # Собираем приложение
       - run: flutter build ios --release --no-codesign
       
-      - name: Compress App Bundle
+      # Магия превращения в .ipa
+      - name: Create IPA
         run: |
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
           cd build/ios/iphoneos
-          zip -r Runner.zip Runner.app
+          zip -r TelegramAntiBlock.ipa Payload
 
-      # Используем актуальную версию загрузчика
+      # Загружаем уже готовый .ipa файл
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Telegram-AntiBlock-iOS
-          path: build/ios/iphoneos/Runner.zip
+          name: Telegram-AntiBlock-IPA
+          path: build/ios/iphoneos/TelegramAntiBlock.ipa
