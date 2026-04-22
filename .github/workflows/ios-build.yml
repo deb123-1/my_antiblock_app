@@ -18,22 +18,30 @@ jobs:
           
       - run: flutter pub get
 
-      - name: Build iOS for Simulator
-        run: |
-          flutter build ios --release --simulator --no-codesign
-        env:
-          CODE_SIGNING_ALLOWED: "NO"
-          CODE_SIGNING_REQUIRED: "NO"
+      - name: Build Frameworks
+        run: flutter build ios --release --no-codesign
 
-      - name: Create IPA
+      - name: Force Archive IPA
         run: |
-          mkdir -p build/ios/iphonesimulator/Payload
-          cp -r build/ios/iphonesimulator/Runner.app build/ios/iphonesimulator/Payload/
-          cd build/ios/iphonesimulator
+          xcodebuild -workspace ios/Runner.xcworkspace \
+                     -scheme Runner \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_IDENTITY="" \
+                     BITCODE_GENERATION_MODE=bitcode \
+                     clean archive -archivePath build/Runner.xcarchive
+
+      - name: Prepare Payload
+        run: |
+          mkdir -p build/Payload
+          cp -r build/Runner.xcarchive/Products/Applications/Runner.app build/Payload/
+          cd build
           zip -r TelegramAntiBlock.ipa Payload
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Telegram-AntiBlock-IPA
-          path: build/ios/iphonesimulator/TelegramAntiBlock.ipa
+          path: build/TelegramAntiBlock.ipa
