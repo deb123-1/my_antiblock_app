@@ -6,58 +6,30 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
-      
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-      
+          architecture: x64
+          
       - run: flutter pub get
 
-<<<<<<< HEAD
-      - name: Build Frameworks
-        run: flutter build ios --release --no-codesign
-
-      - name: Force Archive IPA
+      - name: Build iOS for Simulator (Debug)
         run: |
-          xcodebuild -workspace ios/Runner.xcworkspace \
-                     -scheme Runner \
-                     -configuration Release \
-                     -sdk iphoneos \
-                     CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGN_IDENTITY="" \
-                     BITCODE_GENERATION_MODE=bitcode \
-                     clean archive -archivePath build/Runner.xcarchive
+          flutter build ios --debug --simulator --no-codesign
 
-      - name: Prepare Payload
+      - name: Create IPA
         run: |
-          mkdir -p build/Payload
-          cp -r build/Runner.xcarchive/Products/Applications/Runner.app build/Payload/
-          cd build
+          mkdir -p build/ios/iphonesimulator/Payload
+          cp -r build/ios/iphonesimulator/Runner.app build/ios/iphonesimulator/Payload/
+          cd build/ios/iphonesimulator
           zip -r TelegramAntiBlock.ipa Payload
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Telegram-AntiBlock-IPA
-          path: build/TelegramAntiBlock.ipa
-=======
-      # Ключевой хак: собираем только бинарники, не пытаясь подписать приложение
-      - name: Build iOS Archive
-        run: |
-          flutter build ios --release --no-codesign
-          
-      - name: Create IPA
-        run: |
-          mkdir -p Payload
-          cp -r build/ios/iphoneos/Runner.app Payload/
-          zip -vr TelegramAntiBlock.ipa Payload/
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: AntiBlock-Release
-          path: TelegramAntiBlock.ipa
->>>>>>> 17107ec (Real TG logic)
+          path: build/ios/iphonesimulator/TelegramAntiBlock.ipa

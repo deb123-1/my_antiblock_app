@@ -1,67 +1,39 @@
 import 'package:flutter/material.dart';
+import 'telegram_service.dart';
 import 'package:tdlib/td_api.dart' as td;
-import 'package:tdlib/td_client.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
-void main() => runApp(const MaterialApp(home: TelegramAuthPage()));
+void main() => runApp(const MaterialApp(home: AntiBlockApp()));
 
-class TelegramAuthPage extends StatefulWidget {
-  const TelegramAuthPage({super.key});
+class AntiBlockApp extends StatefulWidget {
+  const AntiBlockApp({super.key});
   @override
-  State<TelegramAuthPage> createState() => _TelegramAuthState();
+  State<AntiBlockApp> createState() => _AntiBlockAppState();
 }
 
-class _TelegramAuthState extends State<TelegramAuthPage> {
-  // --- ТВОИ ДАННЫЕ ---
-  final int apiId = 1234567; 
-  final String apiHash = 'ВАШ_ХЭШ';
-
-  late int _clientId;
+class _AntiBlockAppState extends State<AntiBlockApp> {
+  final TelegramService _tgService = TelegramService();
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
-  String status = "Инициализация...";
+  
+  String status = "Загрузка...";
   bool isCodeSent = false;
-  List<td.Chat> chats = [];
 
   @override
   void initState() {
     super.initState();
-    _setupTdlib();
+    _start();
   }
 
-  Future<void> _setupTdlib() async {
-    _clientId = await TdClient.createClient();
-    final dir = await getApplicationDocumentsDirectory();
-    
-    // Настройка параметров
-    _send(td.SetTdlibParameters(
-      databaseDirectory: "${dir.path}/tdlib",
-      useMessageDatabase: true,
-      useChatInfoDatabase: true,
-      apiId: apiId,
-      apiHash: apiHash,
-      systemLanguageCode: 'ru',
-      deviceModel: 'iPhone AntiBlock',
-      systemVersion: 'iOS 17',
-      applicationVersion: '1.0.0',
-    ));
-
-    // Запускаем прослушку обновлений
-    _listen();
+  void _start() async {
+    await _tgService.init();
+    _listenLoop();
   }
 
-  void _send(td.TdFunction event) => TdClient.nativeTdSend(_clientId, event);
-
-  void _listen() async {
+  void _listenLoop() async {
     while (mounted) {
-      final res = await TdClient.nativeTdReceive(_clientId, 1.0);
-      if (res != null) {
-        if (res is td.UpdateAuthorizationState) {
-          _handleAuth(res.authorizationState);
-        } else if (res is td.UpdateNewChat) {
-          setState(() => chats.add(res.chat));
-        }
+      final res = await _tgService.receive();
+      if (res is td.UpdateAuthorizationState) {
+        _handleAuth(res.authorizationState);
       }
     }
   }
@@ -72,50 +44,35 @@ class _TelegramAuthState extends State<TelegramAuthPage> {
     } else if (state is td.AuthorizationStateWaitCode) {
       setState(() {
         isCodeSent = true;
-        status = "Введите код из приложения";
+        status = "Введите код";
       });
-    } else if (state is td.AuthorizationStateReady) {
-      setState(() => status = "Вход выполнен!");
-      _send(const td.GetChats(limit: 20)); // Запрашиваем реальные чаты
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (status == "Вход выполнен!") return _buildChatList();
-
     return Scaffold(
-      appBar: AppBar(title: const Text("AntiBlock Login")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      appBar: AppBar(title: const Text("AntiBlock")),
+      body: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(status),
             TextField(controller: isCodeSent ? _codeController : _phoneController),
             ElevatedButton(
               onPressed: () {
                 if (!isCodeSent) {
-                  _send(td.SetAuthenticationPhoneNumber(phoneNumber: _phoneController.text));
+                  _tgService.send(td.SetAuthenticationPhoneNumber(
+                    phoneNumber: _phoneController.text,
+                    settings: const td.PhoneNumberAuthenticationSettings(),
+                  ));
                 } else {
-                  _send(td.CheckAuthenticationCode(code: _codeController.text));
+                  _tgService.send(td.CheckAuthenticationCode(code: _codeController.text));
                 }
               },
-              child: Text(isCodeSent ? "Подтвердить" : "Получить код"),
+              child: const Text("Продолжить"),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChatList() {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Мои чаты (AntiBlock)")),
-      body: ListView.builder(
-        itemCount: chats.length,
-        itemBuilder: (context, i) => ListTile(
-          title: Text(chats[i].title),
-          subtitle: const Text("Защищенное соединение активно"),
         ),
       ),
     );
