@@ -18,7 +18,7 @@ jobs:
       - run: flutter pub get
       
       # Собираем приложение
-      - run: flutter build ios --release --no-codesign
+      - run: flutter build ios --release --no-codesign --extra-gen-snapshot-options=--no-use-integer-division
       
       # Магия превращения в .ipa
       - name: Create IPA
