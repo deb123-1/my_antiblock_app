@@ -6,18 +6,16 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          architecture: x64
-          
+      
       - run: flutter pub get
 
+<<<<<<< HEAD
       - name: Build Frameworks
         run: flutter build ios --release --no-codesign
 
@@ -45,3 +43,21 @@ jobs:
         with:
           name: Telegram-AntiBlock-IPA
           path: build/TelegramAntiBlock.ipa
+=======
+      # Ключевой хак: собираем только бинарники, не пытаясь подписать приложение
+      - name: Build iOS Archive
+        run: |
+          flutter build ios --release --no-codesign
+          
+      - name: Create IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -vr TelegramAntiBlock.ipa Payload/
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: AntiBlock-Release
+          path: TelegramAntiBlock.ipa
+>>>>>>> 17107ec (Real TG logic)
