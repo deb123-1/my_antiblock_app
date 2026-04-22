@@ -6,23 +6,28 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      # Убираем то самое предупреждение из логов
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v3
+      # Обновили версию с v3 на v4
+      - uses: actions/checkout@v4
+      
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           architecture: x64
+          
       - run: flutter pub get
       
-      # Собираем версию для iPhone
       - run: flutter build ios --release --no-codesign
       
-      # Маленький лайфхак: упаковываем папку .app в ZIP, чтобы GitHub её увидел
       - name: Compress App Bundle
         run: |
           cd build/ios/iphoneos
           zip -r Runner.zip Runner.app
 
+      # Используем актуальную версию загрузчика
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
