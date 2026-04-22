@@ -1,42 +1,19 @@
-jobs:
-  build:
-    runs-on: macos-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          architecture: x64
-          
-      - run: flutter pub get
-
-      # ХАК ДЛЯ XCODE: Отключаем требование подписи в настройках проекта
-      - name: Disable Code Signing Requirement
+- name: Build iOS for Simulator (No Signing Required)
         run: |
-          sed -i '' 's/CODE_SIGNING_ALLOWED = YES/CODE_SIGNING_ALLOWED = NO/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGNING_REQUIRED = YES/CODE_SIGNING_REQUIRED = NO/g' ios/Runner.xcodeproj/project.pbxproj
-
-      # Сборка с игнорированием ошибок подписи
-      - name: Build iOS
-        run: |
-          flutter build ios --release --no-codesign --extra-gen-snapshot-options=--no-use-integer-division
+          flutter build ios --release --simulator --no-codesign
         env:
-          PROVISIONING_PROFILE_SPECIFIER: ""
-          DEVELOPMENT_TEAM: ""
           CODE_SIGNING_ALLOWED: "NO"
+          CODE_SIGNING_REQUIRED: "NO"
 
-      # Упаковка в IPA (как мы делали раньше)
       - name: Create IPA
         run: |
-          mkdir -p build/ios/iphoneos/Payload
-          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
-          cd build/ios/iphoneos
+          mkdir -p build/ios/iphonesimulator/Payload
+          cp -r build/ios/iphonesimulator/Runner.app build/ios/iphonesimulator/Payload/
+          cd build/ios/iphonesimulator
           zip -r TelegramAntiBlock.ipa Payload
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Telegram-AntiBlock-IPA
-          path: build/ios/iphoneos/TelegramAntiBlock.ipa
+          path: build/ios/iphonesimulator/TelegramAntiBlock.ipa
