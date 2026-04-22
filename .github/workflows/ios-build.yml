@@ -13,9 +13,18 @@ jobs:
           channel: 'stable'
           architecture: x64
       - run: flutter pub get
+      
+      # Собираем версию для iPhone
       - run: flutter build ios --release --no-codesign
-      - name: Upload Build
+      
+      # Маленький лайфхак: упаковываем папку .app в ZIP, чтобы GitHub её увидел
+      - name: Compress App Bundle
+        run: |
+          cd build/ios/iphoneos
+          zip -r Runner.zip Runner.app
+
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-app
-          path: build/ios/iphoneos/Runner.app
+          name: Telegram-AntiBlock-iOS
+          path: build/ios/iphoneos/Runner.zip
